@@ -8,6 +8,9 @@ output: github_document
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(viridis)
+library(httr)
+library(jsonlite)
+
 knitr::opts_chunk$set(
 	echo = TRUE,
 	warning = FALSE,
@@ -23,3 +26,134 @@ scale_colour_discrete = scale_colour_viridis_d
 scale_fill_discrete = scale_fill_viridis_d
 theme_set(theme_minimal() + theme(legend.position = "bottom"))
 ```
+
+# Problem 1
+
+```{r}
+# Download data
+library(p8105.datasets)
+data("instacart")
+
+instacart = instacart %>%
+  janitor::clean_names()
+```
+
+The instacart dataset consists of `r nrow(instacart)` observations of `r ncol(instacart)` variables. The data consists of information regarding orders and the items that were included. In total, there are `r instacart %>% pull(order_id) %>% n_distinct` orders recorded in the data.
+
+## Distribution of order sizes
+```{r}
+instacart %>% 
+  group_by(order_id) %>% 
+  summarize(
+    order_size = n()
+  ) %>% 
+  ggplot(aes(x = order_size)) +
+  geom_histogram() +
+  scale_x_continuous(
+    breaks = c(0, 5, 10, 15, 20, 30, 40, 60, 80)
+  )
+```
+
+It looks like the vast majority of orders have less than 20 items.
+
+## Orders by day of week
+```{r}
+instacart %>% 
+  group_by(order_dow) %>% 
+  summarize(
+    order_count = n_distinct(order_id)
+  ) %>%
+  mutate(
+    order_dow = recode(
+      order_dow, 
+      "0" = "Sunday", 
+      "1" = "Monday", 
+      "2" = "Tuesday", 
+      "3" = "Wednesday", 
+      "4" = "Thursday", 
+      "5" = "Friday",
+      "6" = "Saturday"
+    )
+  ) %>% 
+  knitr::kable()
+```
+
+Unsurprisingly, we can see that most orders from instacart are placed on Sunday.
+
+## Most popular aisles
+```{r}
+instacart %>% 
+  group_by(aisle) %>% 
+  summarize(
+    item_count = n()
+  ) %>%
+  arrange(desc(item_count)) %>% 
+  top_n(10) %>%
+  knitr::kable(caption = "Top 10 aisles by number of items ordered")
+```
+
+There are `r instacart %>% pull(aisle) %>% n_distinct()` different aisles that items can be ordered from. The fresh vegetables aisle has the most items ordered from it. 
+
+
+```{r}
+instacart %>% 
+  group_by(aisle) %>% 
+  summarize(
+    item_count = n()
+  ) %>% 
+  filter(item_count > 10000) %>%
+  ggplot(aes(x = reorder(aisle, item_count), y = item_count)) + 
+  geom_bar(stat = "identity") + 
+  coord_flip() + 
+  xlab("aisle")
+```
+
+This plot shows the number of items ordered per aisle for the aisles with over 10,000 items ordered. Again, we can see that the fresh vegetables aisle had the most items ordered.
+
+
+```{r}
+instacart %>% 
+  filter(aisle == c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>%
+  group_by(aisle, product_name) %>%
+  summarize(
+    item_count = n()
+  ) %>% 
+  ungroup() %>%
+  group_by(aisle) %>%
+  mutate(item_count_ranking = min_rank(desc(item_count))) %>%
+  filter(item_count_ranking <= 3) %>% 
+  arrange(aisle, item_count_ranking) %>% 
+  select(-item_count_ranking) %>% 
+  knitr::kable(caption = "Top 3 items ordered from baking ingredients, dog food car, and packaged vegetables fruits aisles")
+```
+
+From this table, we can see that light brown sugar, organix grain free chicken & vegetable dog food, and organic baby spinach were the most popular items from the baking ingredients, dog food care, and packaged vegetables fruits aisles, respectively.
+
+
+```{r}
+instacart %>% 
+  filter(product_name == c("Pink Lady Apples", "Coffee Ice Cream")) %>%
+  group_by(product_name, order_dow) %>% 
+  summarize(
+    mean_order_hour = round(mean(order_hour_of_day), 0)
+  ) %>% 
+  mutate(
+    order_dow = recode(
+      order_dow, 
+      "0" = "Sunday", 
+      "1" = "Monday", 
+      "2" = "Tuesday", 
+      "3" = "Wednesday", 
+      "4" = "Thursday", 
+      "5" = "Friday",
+      "6" = "Saturday"
+    )
+  ) %>% 
+  pivot_wider(
+    names_from = "order_dow",
+    values_from = "mean_order_hour"
+  ) %>% 
+  knitr::kable(caption = "Mean hour of day that Coffee Ice Cream and Pink Lady Apples are ordered by day of week")
+```
+
+From the table we can see that pink lady apples tend to be ordered earlier in the day compared to coffee ice cream, except for Friday and Saturday.
