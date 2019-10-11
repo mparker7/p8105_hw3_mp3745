@@ -261,3 +261,49 @@ brfss_smart2010_ovr_hlth %>%
 
 The distribution of data value in NY across responses for 2006 and 2010 look relatively similar, however, the distribution for excellent response has got narrower and decreased in 2010, whereas for fair response, it has spread apart.
 
+
+# Problem 3
+
+```{r}
+# load data
+accel_data = read_csv("./data/accel_data.csv") %>% 
+  janitor::clean_names() %>% 
+  pivot_longer(
+    activity_1:activity_1440,
+    names_to = "minute",
+    names_prefix = "activity_",
+    values_to = "activity_count"
+  ) %>% 
+  mutate(
+    minute = as.numeric(minute),
+    day = fct_relevel(as_factor(day), "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"),
+    is_weekend = if_else(
+      day == "Saturday", TRUE, if_else(
+        day == "Sunday", TRUE, FALSE
+      )
+    )
+  )
+```
+
+In this dataset, we have five weeks of accelerometer data collect on a 63 year-old male with BMI 25. The tidied dataset has the following variables: `r colnames(accel_data)`. There are a total of `r nrow(accel_data)` rows.
+
+```{r}
+accel_data %>% 
+  group_by(week, day, is_weekend) %>% 
+  summarize(
+    tot_daily_activity = sum(activity_count)
+  ) %>% 
+  select(day, tot_daily_activity, is_weekend) %>% 
+  knitr::kable()
+```
+
+Based on the above table looking at total daily activity, it is hard to tell if there are any trends. Towards the end of the five week period, it seems total daily activity tends to be lower around the weeknd though.
+
+
+```{r}
+accel_data %>% 
+  ggplot(aes(x = minute, y = activity_count, color = day)) +
+  geom_line()
+```
+
+From this plot, it seems that this man is more active earlier in the day on the weekend, especially on Sunday. Conversely, he is more active later in the day during the week days.
