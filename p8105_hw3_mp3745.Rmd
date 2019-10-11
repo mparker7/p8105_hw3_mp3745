@@ -34,6 +34,7 @@ theme_set(theme_minimal() + theme(legend.position = "bottom"))
 library(p8105.datasets)
 data("instacart")
 
+# Clean names
 instacart = instacart %>%
   janitor::clean_names()
 ```
@@ -80,8 +81,9 @@ instacart %>%
 
 Unsurprisingly, we can see that most orders from instacart are placed on Sunday.
 
-## Most popular aisles
+## Aisles
 ```{r}
+# Top ten aisles by number of items ordered
 instacart %>% 
   group_by(aisle) %>% 
   summarize(
@@ -96,6 +98,7 @@ There are `r instacart %>% pull(aisle) %>% n_distinct()` different aisles that i
 
 
 ```{r}
+# Number of items ordered per aisle (for aisles with over 10,000 items ordered)
 instacart %>% 
   group_by(aisle) %>% 
   summarize(
@@ -112,6 +115,7 @@ This plot shows the number of items ordered per aisle for the aisles with over 1
 
 
 ```{r}
+# Most popular items for 3 particular aisles
 instacart %>% 
   filter(aisle == c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>%
   group_by(aisle, product_name) %>%
@@ -131,6 +135,7 @@ From this table, we can see that light brown sugar, organix grain free chicken &
 
 
 ```{r}
+# Mean hour of day that pink lady apples and coffee ice cream are ordered
 instacart %>% 
   filter(product_name == c("Pink Lady Apples", "Coffee Ice Cream")) %>%
   group_by(product_name, order_dow) %>% 
@@ -193,6 +198,8 @@ brfss_smart2010 =
 # data cleaning
 brfss_smart2010_ovr_hlth = brfss_smart2010 %>% 
   janitor::clean_names() %>% 
+  separate(locationdesc, into = c("state", "county"), sep = " - ") %>% 
+  select(-locationabbr) %>% 
   filter(topic == "Overall Health") %>% 
   filter(response == c("Excellent", "Very good", "Good", "Fair", "Poor")) %>% 
   mutate(
@@ -201,14 +208,14 @@ brfss_smart2010_ovr_hlth = brfss_smart2010 %>%
   arrange(response)
 ```
 
-States observed in 2002 at 7 or more locations
+
 ```{r}
+# States observed in 2002 at 7 or more locations
 brfss_smart2010_ovr_hlth %>% 
-  filter(year == 2002) %>% 
-  separate(locationdesc, into = c("State", "County"), sep = "-") %>% 
-  group_by(State) %>% 
+  filter(year == 2002)  %>% 
+  group_by(state) %>% 
   summarize(
-    num_locations = n_distinct(County)
+    num_locations = n_distinct(county)
   ) %>% 
   filter(num_locations >= 7) %>% 
   knitr::kable()
@@ -217,14 +224,13 @@ brfss_smart2010_ovr_hlth %>%
 There were 6 states observed at 7 or more locations in 2002.
 
 
-States observed in 2010 at 7 or more locations
 ```{r}
+# States observed in 2010 at 7 or more locations
 brfss_smart2010_ovr_hlth %>% 
-  filter(year == 2010) %>% 
-  separate(locationdesc, into = c("State", "County"), sep = "-") %>% 
-  group_by(State) %>% 
+  filter(year == 2010)  %>% 
+  group_by(state) %>% 
   summarize(
-    num_locations = n_distinct(County)
+    num_locations = n_distinct(county)
   ) %>% 
   filter(num_locations >= 7) %>% 
   knitr::kable()
@@ -234,25 +240,26 @@ There were 14 states observed at 7 or more locations in 2010, which is more than
 
 
 ```{r}
+# Plot avg_data_value by state over time (year)
 brfss_smart2010_ovr_hlth %>% 
   filter(response == "Excellent") %>% 
-  group_by(year, locationabbr) %>% 
+  group_by(year, state) %>% 
   summarize(
     avg_data_value = mean(as.numeric(data_value), na.rm = TRUE)
   ) %>% 
-  select(year, locationabbr, avg_data_value) %>% 
+  select(year, state, avg_data_value) %>% 
   ungroup() %>% 
-  ggplot(aes(x = year, y = avg_data_value, group = locationabbr, color = locationabbr)) + 
+  ggplot(aes(x = year, y = avg_data_value, group = state, color = state)) + 
   geom_line()
 ```
 
 From this plot, we can see an overall deceasing trend in the average data value each year at the state level from 2002 to 2010. For the most part, the states are fairly clustered together, with some having a higher average data value than others.
 
 
-Looking at data value in NY by response for 2006 and 2010.
 ```{r}
+# Looking at data value in NY by response for 2006 and 2010
 brfss_smart2010_ovr_hlth %>% 
-  filter(year == c("2006", "2010"), locationabbr == "NY") %>%
+  filter(year == c("2006", "2010"), state == "NY") %>%
   mutate(data_value = as.numeric(data_value)) %>% 
   ggplot(aes(x = response, y = data_value, color = response)) +
   geom_violin() +
@@ -288,6 +295,7 @@ accel_data = read_csv("./data/accel_data.csv") %>%
 In this dataset, we have five weeks of accelerometer data collect on a 63 year-old male with BMI 25. The tidied dataset has the following variables: `r colnames(accel_data)`. There are a total of `r nrow(accel_data)` rows.
 
 ```{r}
+# Total activity by day
 accel_data %>% 
   group_by(week, day, is_weekend) %>% 
   summarize(
@@ -297,10 +305,11 @@ accel_data %>%
   knitr::kable()
 ```
 
-Based on the above table looking at total daily activity, it is hard to tell if there are any trends. Towards the end of the five week period, it seems total daily activity tends to be lower around the weeknd though.
+Based on the above table looking at total daily activity, it is hard to tell if there are any trends. Towards the end of the five week period, it seems total daily activity tends to be lower around the weekend though.
 
 
 ```{r}
+# Activity over the couse of a day by day of week
 accel_data %>% 
   ggplot(aes(x = minute, y = activity_count, color = day)) +
   geom_line()
